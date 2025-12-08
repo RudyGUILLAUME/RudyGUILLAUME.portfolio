@@ -87,6 +87,11 @@
               >
               <a
                 class="text-white text-sm font-medium leading-normal hover:text-primary transition-colors"
+                href="#rendezvous"
+                >Rendez-vous</a
+              >
+              <a
+                class="text-white text-sm font-medium leading-normal hover:text-primary transition-colors"
                 href="#projets"
                 >Projets</a
               >
@@ -745,6 +750,95 @@
                 </div>
               </div>
             </section>
+            <section class="py-16 md:py-24" id="rendezvous">
+              <div class="max-w-5xl mx-auto px-4">
+                <div class="text-center">
+                  <h2
+                    class="text-white text-[28px] font-bold leading-tight tracking-[-0.015em]"
+                  >
+                    Rendez-vous
+                  </h2>
+                  <p class="max-w-2xl mx-auto mt-2 text-base">
+                    Consultez mes prochaines disponibilités et choisissez le
+                    créneau qui vous convient. Les créneaux sont confirmés après
+                    mon retour par email.
+                  </p>
+                </div>
+                <div
+                  class="grid md:grid-cols-[2fr,1fr] gap-8 mt-10 items-start"
+                >
+                  <div
+                    class="bg-[#15232a] border border-[#233c48] rounded-2xl p-6 shadow-lg"
+                  >
+                    <div class="flex items-center justify-between mb-6">
+                      <div>
+                        <p class="text-sm text-[#92b7c9]">Mois affiché</p>
+                        <p
+                          class="text-white text-lg font-semibold"
+                          id="calendar-month-label"
+                        >
+                          Décembre 2025
+                        </p>
+                      </div>
+                      <div class="flex gap-2">
+                        <button
+                          aria-label="Mois précédent"
+                          class="p-2 rounded-lg bg-[#233c48] text-white hover:bg-primary/20 transition-colors"
+                          id="calendar-prev"
+                          type="button"
+                        >
+                          <span class="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        <button
+                          aria-label="Mois suivant"
+                          class="p-2 rounded-lg bg-[#233c48] text-white hover:bg-primary/20 transition-colors"
+                          id="calendar-next"
+                          type="button"
+                        >
+                          <span class="material-symbols-outlined">chevron_right</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-7 text-xs font-semibold text-center text-[#92b7c9] mb-3 uppercase tracking-wide">
+                      <span>Lun</span>
+                      <span>Mar</span>
+                      <span>Mer</span>
+                      <span>Jeu</span>
+                      <span>Ven</span>
+                      <span>Sam</span>
+                      <span>Dim</span>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-2 text-sm"></div>
+                  </div>
+                  <div
+                    class="bg-[#15232a] border border-[#233c48] rounded-2xl p-6 shadow-lg space-y-4"
+                  >
+                    <div>
+                      <p class="text-sm text-[#92b7c9]">Date sélectionnée</p>
+                      <p
+                        class="text-white text-lg font-semibold"
+                        id="selected-date-label"
+                      >
+                        Aucune pour le moment
+                      </p>
+                    </div>
+                    <div class="space-y-3" id="slot-list">
+                      <p class="text-sm text-[#92b7c9]">
+                        Cliquez sur une date avec un point coloré pour voir les
+                        créneaux disponibles.
+                      </p>
+                    </div>
+                    <div class="rounded-lg bg-primary/10 border border-primary/40 p-3 text-xs text-[#c9e9f7]">
+                      <p class="font-semibold text-white">Comment ça marche ?</p>
+                      <p class="mt-1">
+                        Sélectionnez une date, copiez le créneau désiré et
+                        contactez-moi via le formulaire ci-dessous ou par email.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
             <section class="py-16 md:py-24" id="contact">
               <div class="text-center">
                 <h2
@@ -856,5 +950,144 @@
         </p>
       </footer>
     </div>
+    <script>
+      // Données statiques de créneaux (exemple) : ajustez librement.
+      const appointmentSlots = {
+        "2025-12-10": ["09:30 - 10:00", "14:00 - 14:30"],
+        "2025-12-12": ["11:00 - 11:30", "16:00 - 16:45"],
+        "2025-12-17": ["09:00 - 09:45", "13:30 - 14:00", "17:00 - 17:30"],
+        "2025-12-19": ["10:00 - 10:30", "15:30 - 16:00"],
+        "2026-01-07": ["10:00 - 10:30", "11:30 - 12:00", "14:00 - 14:30"],
+      };
+
+      const gridEl = document.getElementById("calendar-grid");
+      const monthLabel = document.getElementById("calendar-month-label");
+      const selectedDateLabel = document.getElementById("selected-date-label");
+      const slotListEl = document.getElementById("slot-list");
+      const prevBtn = document.getElementById("calendar-prev");
+      const nextBtn = document.getElementById("calendar-next");
+
+      const formatter = new Intl.DateTimeFormat("fr-FR", {
+        month: "long",
+        year: "numeric",
+      });
+      const dayFormatter = new Intl.DateTimeFormat("fr-FR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+
+      let current = new Date();
+      let selectedKey = null;
+
+      const dateKey = (date) =>
+        `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+      const hasSlots = (key) => Boolean(appointmentSlots[key]?.length);
+
+      const renderSlots = (key) => {
+        slotListEl.innerHTML = "";
+        if (!key || !hasSlots(key)) {
+          slotListEl.innerHTML =
+            '<p class="text-sm text-[#92b7c9]">Pas de créneau disponible pour cette date.</p>';
+          selectedDateLabel.textContent = key
+            ? dayFormatter.format(new Date(key))
+            : "Aucune pour le moment";
+          return;
+        }
+
+        selectedDateLabel.textContent = dayFormatter.format(new Date(key));
+        appointmentSlots[key].forEach((slot) => {
+          const item = document.createElement("div");
+          item.className =
+            "flex items-center justify-between rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-white";
+          item.innerHTML = `<span>${slot}</span><span class="text-primary font-semibold">Disponible</span>`;
+          slotListEl.appendChild(item);
+        });
+      };
+
+      const renderCalendar = () => {
+        gridEl.innerHTML = "";
+        const year = current.getFullYear();
+        const month = current.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+
+        // Décalage pour commencer la semaine le lundi.
+        const offset = (firstDay.getDay() + 6) % 7;
+        monthLabel.textContent = formatter.format(current);
+
+        for (let i = 0; i < offset; i++) {
+          const empty = document.createElement("div");
+          empty.className = "h-12 rounded-lg";
+          gridEl.appendChild(empty);
+        }
+
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+          const date = new Date(year, month, day);
+          const key = dateKey(date);
+          const cell = document.createElement("button");
+          const isToday =
+            date.toDateString() === new Date().toDateString() &&
+            date.getMonth() === new Date().getMonth();
+          const selected = key === selectedKey;
+          const available = hasSlots(key);
+
+          cell.type = "button";
+          cell.textContent = String(day);
+          cell.className = [
+            "h-12 rounded-lg border text-white transition-all",
+            available
+              ? "border-primary/60 bg-primary/10 hover:bg-primary/20"
+              : "border-[#233c48] bg-[#1c2e37] hover:bg-[#233c48]",
+            selected ? "ring-2 ring-primary" : "",
+            isToday ? "border-primary" : "",
+            "flex flex-col items-center justify-center gap-1",
+          ].join(" ");
+
+          if (available) {
+            const dot = document.createElement("span");
+            dot.className =
+              "block size-1.5 rounded-full bg-primary shadow-[0_0_0_4px_rgba(17,147,212,0.2)]";
+            cell.appendChild(dot);
+          }
+
+          cell.addEventListener("click", () => {
+            selectedKey = key;
+            renderCalendar();
+            renderSlots(key);
+          });
+
+          gridEl.appendChild(cell);
+        }
+      };
+
+      prevBtn.addEventListener("click", () => {
+        current = new Date(current.getFullYear(), current.getMonth() - 1, 1);
+        renderCalendar();
+      });
+
+      nextBtn.addEventListener("click", () => {
+        current = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+        renderCalendar();
+      });
+
+      // Sélectionne automatiquement le prochain créneau disponible.
+      const selectNextAvailable = () => {
+        const today = new Date();
+        const sortedKeys = Object.keys(appointmentSlots).sort();
+        const nextKey =
+          sortedKeys.find((key) => new Date(key) >= today) || sortedKeys[0];
+        if (nextKey) {
+          const nextDate = new Date(nextKey);
+          current = new Date(nextDate.getFullYear(), nextDate.getMonth(), 1);
+          selectedKey = nextKey;
+        }
+      };
+
+      selectNextAvailable();
+      renderCalendar();
+      renderSlots(selectedKey);
+    </script>
   </body>
 </html>
